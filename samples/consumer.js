@@ -1,5 +1,6 @@
 'use strict';
 
+const { option } = require('commander');
 const WebSocket = require('ws'),
     fs = require('fs'),
     program = require('commander');
@@ -12,8 +13,10 @@ let count = 0;
 
 let auth = process.env.KAFKA_AUTH;
 
+
+
 program
-  .option('-t, --topic <value>', 'topic (required)')
+  .option('-t, --topic <topics...>', 'topic (required)')
   .option('-c, --consumer <value>', 'consumer group (required)')
   .option('-n, --num [value]', 'number of messages or batches', 100)
   .option('-o, --offset [value]', 'manually set offset position')
@@ -21,13 +24,20 @@ program
   .option('-p, --partition [value]', 'option partition (default is 0)')
   .parse(process.argv);
 
-let topic = program.topic;
-let consumer = program.consumer;
+const options = program.opts(); 
+
+let topic = options.topic;
+let consumer = options.consumer;
 let numMessages = Number.parseInt(program.num);
-let programOffset = program.offset ? Number.parseInt(program.offset) : null;
-let noOffset = program.nooffset;
-let partition = program.partition;
- 
+let programOffset = options.offset ? Number.parseInt(options.offset) : null;
+let noOffset = options.nooffset;
+let partition = options.partition;
+
+console.log("Topics: "+topic)
+
+for(let i=0; i<topic.length; i++)
+    console.log("Topic: "+topic[i])
+
 if (!topic || !consumer) {
     program.outputHelp();
     process.exit(1);
@@ -56,32 +66,55 @@ if (!noOffset) {
         offset = loadedOffset;
         console.log('loading last known offsets from file: ' + loadedOffset);
     }
-    let options = auth ? {headers: { Authorization: auth}} : null; 
-    ws[topic] = new WebSocket(server + '?topic=' + topic + '&consumerGroup=' + consumer + '&offset=' + offset + partitionParam, options);        
+    let options = auth ? {headers: { Authorization: auth}} : null;
+    console.log('option auth: '+options);
+
+    for(let i=0; i<topic.length; i++){
+        console.log("\n")
+        ws[topic[i]] = new WebSocket(server + '?topic=' + topic[i] + '&consumerGroup=' + consumer + '&offset=' + offset + partitionParam, options);
+    }        
 }
 // if nooffset is supplied, rely on server
 else {
     console.log('nooffset supplied, relying on server');
-    console.log(server + '/?topic=' + topic + '&consumerGroup=' + consumer + partitionParam)
-    let options = auth ? {headers: { Authorization: auth}} : null; 
-    ws[topic] = new WebSocket(server + '?topic=' + topic + '&consumerGroup=' + consumer + partitionParam, options);        
+    console.log(server + '?topic=' + topic[0] + '&consumerGroup=' + consumer + partitionParam)
+    let options = auth ? {headers: { Authorization: auth}} : null;
+    console.log('option auth: '+options); 
+
+    //ws[topic] = new WebSocket(server + '?topic=' + topic + '&consumerGroup=' + consumer + partitionParam, options);        
+    for(let i=0; i<topic.length; i++){
+        console.log("\n") 
+        ws[topic[i]] = new WebSocket(server + '?topic=' + topic[i] + '&consumerGroup=' + consumer + '&offset=' + offset + partitionParam, options);
+    }
 }
 
-ws[topic].on('open', () => {
-    console.log('Opened socket to server for topic ' + topic);
-});
 
-ws[topic].on('error', (error) => {
-    console.log(error);
-});
+for(let i=0; i<topic.length; i++){
 
-ws[topic].on('message', (data, flags) => {
-    // flags.binary will be set if a binary data is received. 
-    // flags.masked will be set if the data was masked. 
-    let batch  = JSON.parse(data);
-    offset = batch[batch.length-1].offset;
-    console.log(`Received a batch of messages from kafka. Size: ${batch.length}, last offset: ${offset}, lastMessage:\n${JSON.stringify(batch[batch.length-1])}`);
-});
+    ws[topic[i]].on('open', () => {
+        console.log('Opened socket to server for topic ' + topic[i]+'\n');
+    });
+
+    ws[topic[i]].on('error', (error) => {
+        console.log(error);
+    });
+
+    ws[topic[i]].on('message', (data, flags) => {
+        // flags.binary will be set if a binary data is received. 
+        // flags.masked will be set if the data was masked. 
+        let batch  = JSON.parse(data);
+        offset = batch[batch.length-1].offset;
+        
+        //FIX for writing all messages
+        for(let j=0; j<=batch.length-1; j++ ){
+            console.log(topic[i])
+            console.log(`${JSON.stringify(batch[j])}\n`);
+        }
+
+    }); 
+}
+
+
 
 process.on('SIGINT', (something) => {
     console.log('Exiting from Ctrl-C... latest offset received from kafka: ' + offset);
