@@ -1,7 +1,6 @@
 'use strict';
 
 const { option } = require('commander');
-const { Console } = require('console');
 const WebSocket = require('ws'),
     fs = require('fs'),
     program = require('commander');
@@ -17,9 +16,7 @@ let auth = process.env.KAFKA_AUTH;
 
 
 program
-//  .option('-t, --topic <topics...>', 'topic (required)')
-  .option('-ul, --upperLeft <upperLeft...>', 'upperLeft (required)')
-  .option('-lr, --lowerRight <lowerRight...>', 'lowerRight (required)')
+  .option('-t, --topic <topics...>', 'topic (required)')
   .option('-c, --consumer <value>', 'consumer group (required)')
   .option('-n, --num [value]', 'number of messages or batches', 100)
   .option('-o, --offset [value]', 'manually set offset position')
@@ -29,53 +26,22 @@ program
 
 const options = program.opts(); 
 
-//let topic = options.topic;
-let upperLeft = options.upperLeft;
-let lowerRight = options.lowerRight;
+let topic = options.topic;
 let consumer = options.consumer;
 let numMessages = Number.parseInt(program.num);
 let programOffset = options.offset ? Number.parseInt(options.offset) : null;
 let noOffset = options.nooffset;
 let partition = options.partition;
 
-//console.log("Topics: "+topic)
+console.log("Topics: "+topic)
 
-//for(let i=0; i<topic.length; i++)
-//    console.log("Topic: "+topic[i])
+for(let i=0; i<topic.length; i++)
+    console.log("Topic: "+topic[i])
 
-//if (!topic || !consumer) {
-//    program.outputHelp();
-//    process.exit(1);
-//}
-
-
-if (!upperLeft || !lowerRight || !consumer) {
+if (!topic || !consumer) {
     program.outputHelp();
     process.exit(1);
-}
-
-
-//const topicsString = getTopic(upperLeft[0],upperLeft[1],lowerRight[0],lowerRight[1]);
-var topicsString = syncGetTopic(upperLeft[0],upperLeft[1],lowerRight[0],lowerRight[1]);
-console.log("TEST: "+topicsString);
-
-let topic;
-
-if(topicsString.length > 2){
-    topicsString= topicsString.substring(1,topicsString.length-1);
-    topicsString= topicsString.replace(/['"]+/g, '')
-    topic = topicsString.split(",");
-    console.log("\ntopicsString: "+topicsString);
-    console.log("\ntopics: "+topic);
-    for(let i=0; i<topic.length; i++){
-        topic[i]=topic[i]+"-Northbound";
-        console.log("Topic: "+topic[i]);
-    }
-        
-    //console.log("\n"+topics[0]);
-}
-
-
+} 
  
 // open or create a file
 let filePath = './offsets/' + topic + '_offset.txt';
@@ -161,50 +127,3 @@ process.on('exit', (something) => {
     fs.writeFileSync(filePath, offset);
     process.exit(1);
 });
-
-
-
-async function getTopic(upperLeft_x, upperLeft_y, lowerRight_x, lowerRight_y){
-
-    const http = require('http')
-    const options = {
-        hostname: 'area-name-service-promenade.router.default.svc.cluster.local',
-        //port: 443,
-        path: '/promenadeAreaNameService/rest/areaService/areas?upperLeft='+upperLeft_x+','+upperLeft_y+'&lowerRight='+lowerRight_x+','+lowerRight_y,
-        method: 'GET'
-    }
-
-    const req = http.request(options, res => {
-        console.log(`statusCode: ${res.statusCode}`)
-
-        res.on('data', async d =>{
-            process.stdout.write(d);
-            let result = await d;
-
-            //let promise = new Promise(())=>;
-            return result.toString();
-        })
-    })
-
-    req.on('error', error => {
-        console.error(error)
-        return "[]";
-    })
-
-    req.end()
-}
-
-
-function syncGetTopic(upperLeft_x, upperLeft_y, lowerRight_x, lowerRight_y){
-    var request = require('sync-request')
-    const options = {
-        hostname: 'area-name-service-promenade.router.default.svc.cluster.local',
-        //port: 443,
-        path: '/promenadeAreaNameService/rest/areaService/areas?upperLeft='+upperLeft_x+','+upperLeft_y+'&lowerRight='+lowerRight_x+','+lowerRight_y,
-        method: 'GET'
-    }
-
-    var res = request(options.method, "http://"+options.hostname+options.path);
-    console.log(res.getBody('utf8'));
-    return res.getBody('utf8');
-}
