@@ -9,9 +9,10 @@ console.log("ciao");
 
 const http = require('http')
 const options = {
-  hostname: 'area-name-service-promenade.router.default.svc.cluster.local',
+  hostname: 'promenadeareanameservice-promenade-lyon.apps.kube.rcost.unisannio.it',
   //port: 443,
-  path: '/promenadeAreaNameService/rest/areaService/areas?upperLeft=45.768377,4.809764&lowerRight=45.762576,4.826136',
+  //path: '/promenadeAreaNameService/rest/areaService/areas?upperLeft=45.768377,4.809764&lowerRight=45.762576,4.826136',
+  path: '/promenadeAreaNameService/rest/areaService/areas?upperLeft=45.758767,4.794102&lowerRight=45.737867,4.877417',
   method: 'GET'
 }
 

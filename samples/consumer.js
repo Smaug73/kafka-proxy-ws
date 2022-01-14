@@ -17,10 +17,10 @@ let auth = process.env.KAFKA_AUTH;
 
 
 program
-//  .option('-t, --topic <topics...>', 'topic (required)')
+// .option('-t, --topic <topics...>', 'topic (required)')
   .option('-ul, --upperLeft <upperLeft...>', 'upperLeft (required)')
   .option('-lr, --lowerRight <lowerRight...>', 'lowerRight (required)')
-  .option('-c, --consumer <value>', 'consumer group (required)')
+  //.option('-c, --consumer <value>', 'consumer group (required)')
   .option('-n, --num [value]', 'number of messages or batches', 100)
   .option('-o, --offset [value]', 'manually set offset position')
   .option('-x, --nooffset', 'rely on server for offset')
@@ -32,7 +32,15 @@ const options = program.opts();
 //let topic = options.topic;
 let upperLeft = options.upperLeft;
 let lowerRight = options.lowerRight;
-let consumer = options.consumer;
+//let consumer = options.consumer;
+
+let consumer = createConsumerGroup();
+//let consumer = 1;
+//let consumer = 1;
+//console.log("test hashcode: "+consumer); // 9b74c9897bac770ffc029102a200c5de
+
+//let consumer = 
+
 let numMessages = Number.parseInt(program.num);
 let programOffset = options.offset ? Number.parseInt(options.offset) : null;
 let noOffset = options.nooffset;
@@ -135,7 +143,8 @@ for(let i=0; i<topic.length; i++){
 
     ws[topic[i]].on('message', (data, flags) => {
         // flags.binary will be set if a binary data is received. 
-        // flags.masked will be set if the data was masked. 
+        // flags.masked will be set if the data was masked.
+        console.log(typeof data) 
         let batch  = JSON.parse(data);
         offset = batch[batch.length-1].offset;
         
@@ -158,7 +167,7 @@ process.on('SIGINT', (something) => {
 
 process.on('exit', (something) => {
     console.log('Exiting from graceful exit... latest offset received from kafka: ' + offset);
-    fs.writeFileSync(filePath, offset);
+    //fs.writeFileSync(filePath, offset);
     process.exit(1);
 });
 
@@ -194,11 +203,26 @@ async function getTopic(upperLeft_x, upperLeft_y, lowerRight_x, lowerRight_y){
     req.end()
 }
 
+function createConsumerGroup(){
+    var ip = require("ip");
+    console.log ("DEBUG IP: "+ ip.address() );
+    let consumer = (Date.now().toString())+ip.address();
+    var hash = 0;
+    if (consumer.length == 0) return hash;
+    for (let i = 0; i < consumer.length; i++) {
+        let char = consumer.charCodeAt(i);
+        hash = ((hash<<5)-hash)+char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    hash=Math.abs(hash);
+    return hash;
+}
+
 
 function syncGetTopic(upperLeft_x, upperLeft_y, lowerRight_x, lowerRight_y){
     var request = require('sync-request')
     const options = {
-        hostname: 'area-name-service-promenade.router.default.svc.cluster.local',
+        hostname: 'promenadeareanameservice-promenade-lyon.apps.kube.rcost.unisannio.it',
         //port: 443,
         path: '/promenadeAreaNameService/rest/areaService/areas?upperLeft='+upperLeft_x+','+upperLeft_y+'&lowerRight='+lowerRight_x+','+lowerRight_y,
         method: 'GET'
