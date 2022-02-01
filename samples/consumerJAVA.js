@@ -6,7 +6,10 @@ const WebSocket = require('ws'),
     fs = require('fs'),
     program = require('commander');
 
-let server = 'ws://localhost:9999/';
+//let server = 'ws://localhost:9999/';
+//let server = 'ws://localhost:8080/java-websocket/kafka-connector/';
+let server = 'ws://localhost:8080//java-websocket/kafka-connector/';
+//let server = 'ws://connector-kafka-ws-promenade-lyon.apps.kube.rcost.unisannio.it/java-websocket/kafka-connector/';
 
 let ws = {};
 let offset = 0;
@@ -79,8 +82,7 @@ if(topicsString.length > 2){
         topic[i]=topic[i]+"-Northbound";
         console.log("Topic: "+topic[i]);
     }
-        
-    //console.log("\n"+topics[0]);
+    console.log("\ntopics AFTER: "+topic);
 }
 
 
@@ -111,63 +113,105 @@ if (!noOffset) {
     let options = auth ? {headers: { Authorization: auth}} : null;
     console.log('option auth: '+options);
 
-    for(let i=0; i<topic.length; i++){
-        console.log("\n")
-        ws[topic[i]] = new WebSocket(server + '?topic=' + topic[i] + '&consumerGroup=' + consumer + '&offset=' + offset + partitionParam, options);
-    }        
+    // for(let i=0; i<topic.length; i++){
+    //     console.log("\n")
+    //     ws[topic[i]] = new WebSocket(server + '?topics=' + topic[i] + '&groupId=' + consumer + '&offset=' + offset + partitionParam, options);
+    // }        
 }
 // if nooffset is supplied, rely on server
 else {
     console.log('nooffset supplied, relying on server');
-    console.log(server + '?topic=' + topic[0] + '&consumerGroup=' + consumer + partitionParam)
+    console.log(server + '?topics=' + topic + '&groupId=' + consumer + partitionParam)
     let options = auth ? {headers: { Authorization: auth}} : null;
     console.log('option auth: '+options); 
 
     //ws[topic] = new WebSocket(server + '?topic=' + topic + '&consumerGroup=' + consumer + partitionParam, options);        
-    for(let i=0; i<topic.length; i++){
-        console.log("\n") 
-        ws[topic[i]] = new WebSocket(server + '?topic=' + topic[i] + '&consumerGroup=' + consumer + '&offset=' + offset + partitionParam, options);
-    }
+    // for(let i=0; i<topic.length; i++){
+    //     console.log("\n") 
+    //     ws[topic[i]] = new WebSocket(server + '?topic=' + topic[i] + '&consumerGroup=' + consumer + '&offset=' + offset + partitionParam, options);
+    // }
+
+    ws[topic] = new WebSocket(server + '?topics=' + topic + '&groupId=' + consumer);
+   
 }
 
 
-for(let i=0; i<topic.length; i++){
+// for(let i=0; i<topic.length; i++){
 
-    ws[topic[i]].on('open', () => {
-        console.log('Opened socket to server for topic ' + topic[i]+'\n');
-    });
+//     ws[topic[i]].on('open', () => {
+//         console.log('Opened socket to server for topic ' + topic[i]+'\n');
+//     });
 
-    ws[topic[i]].on('error', (error) => {
-        console.log(error);
-    });
+//     ws[topic[i]].on('error', (error) => {
+//         console.log(error);
+//     });
 
-    ws[topic[i]].on('message', (data, flags) => {
-        // flags.binary will be set if a binary data is received. 
-        // flags.masked will be set if the data was masked.
-        console.log(typeof data) 
-        let batch  = JSON.parse(data);
-        offset = batch[batch.length-1].offset;
+//     ws[topic[i]].on('message', (data, flags) => {
+//         // flags.binary will be set if a binary data is received. 
+//         // flags.masked will be set if the data was masked.
+//         console.log(typeof data) 
+//         let batch  = JSON.parse(data);
+//         offset = batch[batch.length-1].offset;
         
-        //FIX for writing all messages
-        for(let j=0; j<=batch.length-1; j++ ){
-            console.log(topic[i])
-            console.log(`${JSON.stringify(batch[j])}\n`);
-        }
+//         //FIX for writing all messages
+//         for(let j=0; j<=batch.length-1; j++ ){
+//             console.log(topic[i])
+//             console.log(`${JSON.stringify(batch[j])}\n`);
+//         }
 
-    }); 
-}
+//     }); 
+// }
+
+ws[topic].on('open', () => {
+    console.log('Opened socket to server for topic ' + topic+'\n');
+});
+
+ws[topic].on('error', (error) => {
+    console.log(error);
+    console.log("error");
+});
+
+ws[topic].on('close', (error) => {
+    console.log(error);
+    console.log("close");
+});
+
+let counttt =0;
+ws[topic].on('message', (data, flags) => {
+    // flags.binary will be set if a binary data is received. 
+    // flags.masked will be set if the data was masked.
+    console.log(typeof data)
+    console.log(data) 
+    // let batch  = JSON.parse(data);
+    // offset = batch[batch.length-1].offset;
+    // counttt+=1;
+    // if(counttt<10){
+    //     console.log(typeof data)
+    //     console.log(data)
+    // }
+    // //FIX for writing all messages
+    // for(let j=0; j<=batch.length-1; j++ ){
+    //     console.log(topic[0])
+    //     console.log(`${JSON.stringify(batch[j])}\n`);
+    // }
+
+}); 
 
 
 
 process.on('SIGINT', (something) => {
     console.log('Exiting from Ctrl-C... latest offset received from kafka: ' + offset);
     fs.writeFileSync(filePath, offset);
+    //ws[topic].close();
+    ws[topic].terminate();
     process.exit(1);
 });
 
 process.on('exit', (something) => {
     console.log('Exiting from graceful exit... latest offset received from kafka: ' + offset);
     //fs.writeFileSync(filePath, offset);
+    //ws[topic].close();
+    //ws[topic].terminate();
     process.exit(1);
 });
 

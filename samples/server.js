@@ -8,7 +8,8 @@ console.log('Starting Web Socket Server');
 let kafkaProxy = new KafkaProxy({
     wsPort: 9999, 
     //kafka: 'localhost:9092/',
-    kafka: '137.121.170.226:31090/`',
+    kafka: '172.31.0.134:31090/`',
+    //kafka: '172.30.161.35:31092/',
     idleTimeout: 100,
     maxBytes: 1000000,
     partition: 0,    
